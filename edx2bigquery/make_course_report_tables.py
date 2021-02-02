@@ -201,23 +201,27 @@ class CourseReport(object):
 
         self.nskip = nskip
 	if 1:
-	    self.make_grades_analysis_table()
-	    self.make_grades_persistent_table()
+	    #self.make_grades_analysis_table()
+	    #self.make_grades_persistent_table()
 	    self.make_user_info_combo_table()
+	    self.make_pev_table()
+	    self.make_pc_day_totals_table()
+	    self.make_pc_day_ip_counts_table()
             self.combine_show_answer_stats_by_course()
             self.make_totals_by_course()
             self.make_course_axis_table()
             self.make_video_axis_table()
 	    self.make_delta_timestamp_table()
-            self.make_person_course_day_table() 
+            #self.make_person_course_day_table() 
             self.make_medians_by_course()
             self.make_table_of_email_addresses()
             self.make_table_of_email_addresses_by_institution()
-            self.make_global_modal_ip_table()
+            self.make_global_modal_ip_table() # The query is too large. The maximum legacy SQL query length is 256.000K characters
             self.make_global_modal_lang_table()
             self.make_enrollment_by_day()
             try:
-                self.make_time_on_task_stats_by_course()
+                #####self.make_time_on_task_stats_by_course()
+		pass
             except Exception as err:
                 print "====> ERROR: Failed in make_time_on_task_stats_by_course(), err %s" % str(err)
                 print "====> Continuing anyway"
@@ -249,7 +253,7 @@ class CourseReport(object):
         return 0
 
     def do_table(self, the_sql, tablename, the_dataset=None, sql_for_description=None, check_skip=True, 
-                 allowLargeResults=False, maximumBillingTier=None):
+                 allowLargeResults=True, maximumBillingTier=None):
 
         if check_skip:
             if self.skip_or_do_step(tablename) < 0:
@@ -282,7 +286,6 @@ class CourseReport(object):
         msg = "CSV download link: %s" % gsutil.gs_download_link(gsfn)
         print msg
         bqutil.add_description_to_table(the_dataset, tablename, msg, append=True, project_id=self.output_project_id)
-
 
     def make_medians_by_course(self):
 
@@ -593,6 +596,30 @@ order by course_id;
 	'''.format(**self.parameters)
 	self.do_table(the_sql, tablename='user_info_combo', allowLargeResults=True )
 
+    def make_pev_table(self):
+
+	the_sql = '''
+	    SELECT *
+	    FROM {all_pev_tables}
+	'''.format(**self.parameters)
+	self.do_table(the_sql, tablename='person_enrollment_verified', allowLargeResults=True )
+
+    def make_pc_day_totals_table(self):
+
+	the_sql = '''
+	    SELECT *
+	    FROM {all_pcdtotals_tables}
+	'''.format(**self.parameters)
+	self.do_table(the_sql, tablename='pc_day_totals', allowLargeResults=True )
+
+    def make_pc_day_ip_counts_table( self ):
+	
+	the_sql = '''
+	    SELECT *
+	    FROM {pcday_ip_counts_tables}
+	'''.format( **self.parameters )
+	self.do_table(the_sql, tablename='pcday_ip_counts', allowLargeResults=True )
+
     def make_delta_timestamp_table(self):
 
         the_sql = '''
@@ -612,16 +639,16 @@ order by course_id;
 		      verified_unenroll_time AS time_stamp,
 		      'verified_unenroll_time' AS event_type
 		    FROM
-		      {all_pev_tables}
+		      course_report_latest.person_enrollment_verified
 		    WHERE
-		      ( DATE(verified_unenroll_time) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -7, "DAY")) AND
+		      ( DATE(verified_unenroll_time) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -70, "DAY")) AND
 		        DATE(verified_unenroll_time) <= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -1, "DAY")) )
                     ) AS pev
 		  LEFT JOIN (
 		    SELECT
 		      *
 		    FROM
-		      {uic_tables}) AS uic
+		      course_report_latest.user_info_combo) AS uic
 		  ON
 		    pev.user_id = uic.user_id
 		  WHERE
@@ -639,16 +666,16 @@ order by course_id;
 		      verified_enroll_time AS time_stamp,
 		      'verified_enroll_time' AS event_type
 		    FROM
-		      {all_pev_tables}
+		      course_report_latest.person_enrollment_verified
 		    WHERE
-		      ( DATE(verified_enroll_time) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -7, "DAY")) AND
+		      ( DATE(verified_enroll_time) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -70, "DAY")) AND
 		      DATE(verified_enroll_time) <= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -1, "DAY")) )
 		    ) AS pev
 		  LEFT JOIN (
 		    SELECT
 		      *
 		    FROM
-		      {uic_tables} ) AS uic
+		     course_report_latest.user_info_combo ) AS uic
 		  ON
 		    pev.user_id = uic.user_id
 		  WHERE
@@ -662,9 +689,9 @@ order by course_id;
 		    last_event AS time_stamp,
 		    'last_event' AS event_type
 		  FROM
-		    {all_pcdtotals_tables}
+		    course_report_latest.pc_day_totals
 		  WHERE
-		    ( DATE(last_event) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -7, "DAY")) AND
+		    ( DATE(last_event) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -70, "DAY")) AND
 		      DATE(last_event) <= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -1, "DAY")) )
  		  ),
 		  # Get 'first_event'
@@ -676,9 +703,9 @@ order by course_id;
 		    first_event AS time_stamp,
 		    'first_event' AS event_type,
 		  FROM
-		    {all_pcdtotals_tables}
+		    course_report_latest.pc_day_totals
 		  WHERE
-		    ( DATE(first_event) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -7, "DAY")) AND
+		    ( DATE(first_event) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -70, "DAY")) AND
 		      DATE(first_event) <= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -1, "DAY")) )
 		  ),
 		  # get 'cert_created_date'
@@ -690,9 +717,9 @@ order by course_id;
 		    certificate_created_date AS time_stamp,
 		    'cert_created_date' AS event_type
 		  FROM
-		    {uic_tables}
+		    course_report_latest.user_info_combo
 		  WHERE
-		    ( DATE(certificate_created_date) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -7, "DAY")) AND
+		    ( DATE(certificate_created_date) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -70, "DAY")) AND
 		      DATE(certificate_created_date) <= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -1, "DAY")) )
 		  ),
 		  # get 'start_time'
@@ -704,9 +731,9 @@ order by course_id;
 		    enrollment_created AS time_stamp,
 		    'start_time' AS event_type
 		  FROM
-		    {uic_tables}
+		    course_report_latest.user_info_combo
 		  WHERE
-		    ( DATE(enrollment_created) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -7, "DAY")) AND
+		    ( DATE(enrollment_created) >= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -70, "DAY")) AND
 		      DATE(enrollment_created) <= DATE(DATE_ADD(CURRENT_TIMESTAMP(), -1, "DAY")) )
 		  )
 		  GROUP EACH BY username, course_id, time_stamp, event_type
@@ -1002,7 +1029,7 @@ order by course_id;
                           RANK() over (partition by username order by ip_count ASC) n_different_ip,
                           RANK() over (partition by username order by ip_count DESC) rank,
                     from ( select username, ip, sum(ipcount) as ip_count
-                           from {pcday_ip_counts_tables}
+                           from course_report_latest.pcday_ip_counts
                            GROUP BY username, ip
                     )
                   )
@@ -1022,7 +1049,7 @@ order by course_id;
                           RANK() over (partition by username order by ip_count ASC) n_different_ip,
                           RANK() over (partition by username order by ip_count DESC) rank,
                     from ( select username, ip, sum(ipcount) as ip_count
-                           from {pcday_ip_counts_tables}
+                           from course_report_latest.pcday_ip_counts
                            WHERE {hash_limit}
                            GROUP EACH BY username, ip
                     )

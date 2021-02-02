@@ -50,7 +50,9 @@ def get_course_ids_from_course_list(args):
     if course_dicts is None:
         print "The --courses argument requires that the 'courses' dict be defined within the edx2bigquery_config.py configuraiton file"
         sys.exit(-1)
-    if args.clist not in course_dicts:
+    if args.rapidclist:
+        return args.rapidclist
+    elif args.clist not in course_dicts:
         print "The --courses argument specified a course list of name '%s', but that does not exist in the courses dict in the config file" % args.clist
         print "The courses dict only has these lists defined: %s" % course_dicts.keys()
         sys.exit(-1)
@@ -89,6 +91,9 @@ def get_course_ids_no_check(args):
     if args.clist_from_missing_table:
         return get_course_ids_from_subset_missing_table(args)
     if args.clist:
+        return get_course_ids_from_course_list(args)
+    if args.rapidclist:
+        print get_course_ids_from_course_list(args)
         return get_course_ids_from_course_list(args)
     if args.year2:
         return edx2bigquery_config.course_id_list
@@ -1060,6 +1065,12 @@ def doall(param, course_id, args, stdout=None):
 
         grades_persistent(subsection_param, course_id, args)
 
+	try:
+	    analyze_grades(param, course_id, args)
+	except Exception as err:
+	    print "--> Failed in analyze_grades with err=%s" % str(err)
+	    print "--> continuing with nightly anyway"
+
         success = True
 
     except Exception as err:
@@ -1740,6 +1751,7 @@ check_for_duplicates        : check list of courses for duplicates
     parser.add_argument("--parallel", help="run separate course_id's in parallel", action="store_true")
     parser.add_argument("--static-only", help="only update the current static dataset", action="store_true")
     parser.add_argument("--year2", help="increase output verbosity", action="store_true")
+    parser.add_argument("--rapidclist", nargs='*', help="Specify RAPID-ETL Course Listings as defined by data request interface template (DRIFT). More details to come.")
     parser.add_argument("--clist", type=str, help="specify name of list of courses to iterate command over")
     parser.add_argument("--clist-from-missing-table", type=str, help="iterate command over list of course_id's missing specified table")
     parser.add_argument("--force-recompute", help="force recomputation", action="store_true")

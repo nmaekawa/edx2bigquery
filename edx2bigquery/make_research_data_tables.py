@@ -74,7 +74,7 @@ RESEARCH_DATA_PRODUCTS = collections.OrderedDict( [\
 			#( RDP_COURSE_AXIS, RDP_COURSE_AXIS+ FILE_EXT ),
 			#( RDP_PERSON_COURSE, RDP_PERSON_COURSE + FILE_EXT ), # Exported through 'do_all' command
 			#( RDP_PERSON_COURSE_SURVEY, RDP_PERSON_COURSE_SURVEY + FILE_EXT ), # Exported through survey workflow
-			( RDP_PERSON_COURSE_DAY, RDP_PERSON_COURSE_DAY + FILE_EXT ),
+			###( RDP_PERSON_COURSE_DAY, RDP_PERSON_COURSE_DAY + FILE_EXT ), # Temp exclude since nneed to request space for ci3_charlesriverx
 			# Enrollment
 			#( RDP_ENROLLDAY_ALL, RDP_ENROLLDAY_ALL + FILE_EXT ),
 			#( RDP_ENROLLMENT_EVENTS, RDP_ENROLLMENT_EVENTS + FILE_EXT ),

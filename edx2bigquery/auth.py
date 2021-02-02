@@ -17,10 +17,13 @@ import httplib2
 import json
 import os
 import sys
-from edx2bigquery_config import auth_key_file
+from edx2bigquery_config import auth_key_file, auth_service_acct
+
+
+HAS_CRYPTO = False
 
 from apiclient import discovery
-from oauth2client.client import flow_from_clientsecrets, Credentials
+from oauth2client.client import flow_from_clientsecrets, Credentials, GoogleCredentials 
 try: 
   from oauth2client.service_account import ServiceAccountCredentials
 except ImportError:
@@ -55,15 +58,17 @@ def get_creds(verbose=False):
     return get_oauth2_creds()
   
 def get_gcloud_oauth2_creds():
-  gcfp = '~/.config/gcloud/credentials'
+  #gcfp = '~/.config/gcloud/credentials'
+  gcfp = '~/.config/gcloud/application_default_credentials.json'
   credfn = os.path.expanduser(gcfp)
   if not os.path.exists(credfn):
     msg = "[edx2bigquery] Authentication error!  You have specified USE_GCLOUD_AUTH in the configuration, but do not have gcloud authentication available.\n"
     msg += "               Please authenticate using 'gcloud auth login' before running this."
     print msg
     raise Exception(msg)
-  gcloud_cred = json.loads(open(credfn).read())['data'][0]['credential']
-  credentials = Credentials.new_from_json(json.dumps(gcloud_cred))
+  credentials = GoogleCredentials.get_application_default()
+  #gcloud_cred = json.loads(open(credfn).read())['data'][0]['credential']
+  #credentials = Credentials.new_from_json(json.dumps(gcloud_cred))
   return credentials
 
 def get_oauth2_creds():

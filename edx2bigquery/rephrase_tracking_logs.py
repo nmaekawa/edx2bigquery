@@ -280,7 +280,8 @@ def do_rephrase(data, do_schema_check=True, linecnt=0):
                              ['environment'],			# 06sep2017 rp
                              ['minion_id'],			# 06sep2017 rp
                              ['event_struct', 'duration'],	# 22nov2017 ic
-                             ['event_struct', 'play_medium']
+                             ['event_struct', 'play_medium'],
+                             ['context', 'context_id'],		# 2020-06-12 gl
                          ])
 
     #----------------------------------------

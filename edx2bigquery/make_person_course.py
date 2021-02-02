@@ -928,6 +928,64 @@ class PersonCourse(object):
 
         self.log("  Added verified enrollment and unenrollment times: %d verified enrollments; %d verified unenrollments" % (verified_enroll_count, verified_unenroll_count))
 
+    def compute_eighth_phase(self):
+	'''
+	Load up grades analysis
+	'''
+	self.load_enrollment_verified()
+
+        pcd_fields = [ 'grade_latest',
+                       'grade_latest_timestamp',
+                       'grade_latest_source',
+                       'grade_latest_passing',
+                       'grade_cert',
+                       'grade_persistent',
+                       'grade_edxdash',
+                       'grade_cert_created_date',
+                       'grade_cert_modified_date',
+                       'grade_persistent_created',
+                       'grade_persistent_modified',
+                       'grade_persistent_passed_timestamp',
+                       'grade_persistent_first_attempted_problem_subsection',
+                       'grade_edxdash_timestamp', ]
+
+	#grade_cnt = 0
+	#grade_missing_cnt = 0
+        #for key, pcent in self.pctab.iteritems():
+            #uid = str(pcent['user_id'])
+            #username = pcent['username']
+
+            # Initialize grades
+            #for pcdl in pcd_fields:
+	        #pcent[ pcdl ] = None
+
+
+            # Load up grades 
+	    #try:
+	        #for pcdl in pcd_fields:
+	            #pcent[ pcdl ] = self.grades_analysis['data_by_key'].get(username, {}).get( pcdl, None)
+
+
+                # le = self.pc_last_event['data_by_key'].get(username, {}).get('last_event', None)
+                #le = self.grades_analysis['data_by_key'].get(username, {}).get('last_event', None)
+                #fe = self.grades_analysis['data_by_key'].get(username, {}).get('first_event', None)
+                #if le is not None and le:
+                    #try:
+                        #le = str(datetime.datetime.utcfromtimestamp(float(le)))
+                    #except Exception as err:
+                        #self.log('oops, last event cannot be turned into a time; le=%s, username=%s' % (le, username))
+                    #pcent['last_event'] = le
+
+
+
+                #if pcent[ 'grade_latest' ] is not None:
+	            #grade_cnt += 1
+                #else:
+	            #grade_missing_cnt += 1
+	    #except Exception as err:
+	        #grade_missing_cnt += 1
+	pass
+
 
     def output_table(self):
         '''
@@ -1030,6 +1088,29 @@ class PersonCourse(object):
         self.pc_nchapters = bqutil.get_bq_table(self.dataset, tablename, the_sql, key={'name': 'user_id'},
                                                 depends_on=[ '%s.studentmodule' % self.dataset ],
                                                 force_query=self.force_recompute_from_logs, logger=self.log)
+
+    def load_grades_analysis( self ):
+        '''
+        Load Grades Analysis
+        '''
+	tables = bqutil.get_list_of_table_ids(self.dataset)
+	tablename = 'grades_analysis'
+	if not tablename in tables:
+		self.log( "===> WARNING: Missing table %s for %s" % ( tablename, self.course_id ) )
+		setattr(self, tablename, {'data': [], 'data_by_key': {}})
+		return
+        sql = '''
+	      SELECT *
+              FROM [{dataset}.grades_analysis]
+              '''.format(**self.sql_parameters)
+        self.log( "Loading %s from BigQuery" % tablename )
+        try:
+            setattr(self, tablename, bqutil.get_bq_table( self.dataset, tablename, sql=sql, key={'name': 'user_id'},
+                                                          depends_on=[ '%s.grades_analysis' % self.dataset ],
+                                                          force_query=self.force_recompute_from_logs, logger=self.log) )
+        except Exception as err:
+            self.log("[load_persistent_grades] Failed, with error=%s" % str(err))
+
 
     def load_enrollment_verified(self):
         '''
